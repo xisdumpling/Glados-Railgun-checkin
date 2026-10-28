@@ -57,7 +57,7 @@ class FakeConfig:
 class FakeAPI:
     instances = []
 
-    def __init__(self, domain, cookie_index, verbose=False):
+    def __init__(self, domain, cookie_index, verbose=False, user_agent=None, **kwargs):
         self.exchange_calls = []
         FakeAPI.instances.append(self)
 

@@ -96,6 +96,7 @@ class Config:
     ENV_COOKIES = "GLADOS_COOKIES"
     ENV_EXCHANGE_PLAN = "GLADOS_EXCHANGE_PLAN"
     ENV_VERBOSE = "GLADOS_VERBOSE"
+    ENV_USER_AGENT = "GLADOS_USER_AGENT"
 
     """默认兑换计划"""
     DEFAULT_EXCHANGE_PLAN = "plan500"
@@ -105,6 +106,12 @@ class Config:
 
     """默认域名"""
     DOMAINS = ["glados.cloud"]
+
+    """默认 User-Agent"""
+    DEFAULT_USER_AGENT = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    )
 
     """兑换计划列表"""
     EXCHANGE_PLANS = {
@@ -117,6 +124,7 @@ class Config:
         self.cookies_list: List[str] = []
         self.exchange_plan: str = self.DEFAULT_EXCHANGE_PLAN
         self.verbose: bool = self.DEFAULT_VERBOSE
+        self.user_agent: str = self.DEFAULT_USER_AGENT
         self._load_config()
 
     def _load_config(self) -> None:
@@ -124,6 +132,7 @@ class Config:
         raw_cookies_env: Optional[str] = os.environ.get(self.ENV_COOKIES)
         exchange_plan_env = (os.environ.get(self.ENV_EXCHANGE_PLAN) or "").strip()
         verbose_env = (os.environ.get(self.ENV_VERBOSE) or "").strip()
+        user_agent_env = (os.environ.get(self.ENV_USER_AGENT) or "").strip()
 
         if not raw_cookies_env:
             logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_COOKIES}' 未设置。")
@@ -157,6 +166,12 @@ class Config:
 
         logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_VERBOSE}: {self.verbose}。")
 
+        if user_agent_env:
+            self.user_agent = user_agent_env
+            logger.info(f"{LogEmoji.SUCCESS} 使用自定义 User-Agent。")
+        else:
+            self.user_agent = self.DEFAULT_USER_AGENT
+
 
 class API:
     """API 调用"""
@@ -166,10 +181,17 @@ class API:
     POINTS_URL = APIEndpoint.POINTS.value
     EXCHANGE_URL = APIEndpoint.EXCHANGE.value
 
-    def __init__(self, domain: str, cookie_index: int = 0, verbose: bool = False):
+    def __init__(
+        self,
+        domain: str,
+        cookie_index: int = 0,
+        verbose: bool = False,
+        user_agent: Optional[str] = None,
+    ):
         self.domain: str = domain
         self.cookie_index: int = cookie_index
         self.verbose: bool = verbose
+        self.user_agent: str = user_agent or Config.DEFAULT_USER_AGENT
         self.headers: Dict[str, str] = self._get_headers()
         self.session = requests.Session()
         self.session.headers.update(self.headers)
@@ -199,7 +221,10 @@ class API:
         """获取请求头"""
         return {
             "origin": f"https://{self.domain}",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+            "referer": f"https://{self.domain}/console/checkin",
+            "user-agent": self.user_agent,
+            "content-type": "application/json;charset=UTF-8",
+            "accept": "application/json, text/plain, */*",
         }
 
     def _log(self, level: str, emoji: str, message: str, force: bool = False) -> None:
@@ -423,7 +448,12 @@ class Checker:
     def _checkin_on_domain(self, cookie: str, cookie_idx: int, domain: str) -> CheckinResult:
         result = CheckinResult(cookie_idx, domain)
 
-        with API(domain, cookie_idx, verbose=self.config.verbose) as api:
+        with API(
+            domain,
+            cookie_idx,
+            verbose=self.config.verbose,
+            user_agent=getattr(self.config, "user_agent", None),
+        ) as api:
             # 1. 获取状态
             self._log(cookie_idx, domain, LogEmoji.STATUS, "查询剩余天数")
             days_str, status_code = api.get_status(cookie)

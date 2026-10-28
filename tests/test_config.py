@@ -59,6 +59,27 @@ class ConfigEnvironmentTests(unittest.TestCase):
 
         self.assertEqual(checkin.Config.DOMAINS, ["glados.cloud"])
 
+    def test_user_agent_configuration_and_headers(self):
+        checkin = self.import_checkin()
+        custom_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0 Safari/537.36"
+        env = {
+            "GLADOS_COOKIES": "gld:sess=fake; gld:sess.sig=fake;",
+            "GLADOS_USER_AGENT": custom_ua,
+        }
+
+        with patch.dict(os.environ, env, clear=True):
+            config = checkin.Config()
+
+        self.assertEqual(config.user_agent, custom_ua)
+
+        api = checkin.API("glados.cloud", cookie_index=1, user_agent=config.user_agent)
+        headers = api._get_headers()
+        self.assertEqual(headers["origin"], "https://glados.cloud")
+        self.assertEqual(headers["referer"], "https://glados.cloud/console/checkin")
+        self.assertEqual(headers["user-agent"], custom_ua)
+        self.assertEqual(headers["content-type"], "application/json;charset=UTF-8")
+        self.assertEqual(headers["accept"], "application/json, text/plain, */*")
+
 
 class FakeConfig:
     verbose = False

@@ -16,26 +16,31 @@
 
 ### 添加 Secret
 
-1. 跳转至自己的仓库的`Settings`->`Secrets and variables`->`Action`
+1. 跳转至自己的仓库的 `Settings` -> `Secrets and variables` -> `Actions`。
 
-2. 添加1个`repository secret`，命名为`GLADOS_COOKIES`，其值对应 GLaDOS 账号 Cookie 中的 `koa:sess` 和 `koa:sess.sig`。
+2. 添加必须的 Repository Secret，命名为 `GLADOS_COOKIES`：
 
-推荐使用浏览器扩展 **Cookie-Editor** 获取：
+推荐使用浏览器扩展 **Cookie-Editor** 或按 `F12` 获取：
 
-- 登录 [GLaDOS](https://glados.cloud) 后，点击浏览器扩展栏里的 **Cookie-Editor**。
-- 确认列表中存在 `koa:sess` 和 `koa:sess.sig` 两项。
-- 点击 Cookie-Editor 底部的导出按钮，复制导出的 Cookie 文本。
-- 将其中的 `koa:sess=...; koa:sess.sig=...;` 配置到 GitHub Secret `GLADOS_COOKIES`。
+- 登录 [GLaDOS](https://glados.cloud) 后，点击浏览器扩展栏里的 **Cookie-Editor**（或按 `F12` 切换到 **Application** -> **Cookies**）。
+- 确认包含完整的 Session 字段及其签名（新版为 `gld:sess` 和 `gld:sess.sig`；旧版为 `koa:sess` 和 `koa:sess.sig`）。
+- **必须成对包含两个字段**，例如：
+  `gld:sess=...; gld:sess.sig=...;` （或 `koa:sess=...; koa:sess.sig=...;`）
+- 将该完整字符串填入 `GLADOS_COOKIES`。
+- 多账号请在 `GLADOS_COOKIES` 中使用 `&` 连接多个 Cookie（例如：`cookie1&cookie2`）。
 
-![Cookie-Editor 获取 Cookie](imgs/cookie-editor.png)
+> ⚠️ **防止 Cookie 频繁/第二天失效的关键注意事项**：
+> 1. **抓取后切勿点击“退出登录（Log out）”**：点击退出会导致服务端 Session 立即销毁作废，抓取后直接关闭标签页即可。
+> 2. **避免多端频繁重新登录**：如果在手机端或其它浏览器再次登录，服务端会刷新 Session，之前配置给 GitHub Actions 的 Cookie 就会被顶替失效。
 
-> 参考格式：`koa:sess=eyJ1c2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAwMH0=; koa:sess.sig=xJkOxxxxxxxxxxxxxxxtnM;`
+3. 添加可选的 Repository Secret `GLADOS_USER_AGENT`（强烈推荐，防止被风控）：
+- GLaDOS 会校验发起请求的设备指纹。若 Actions 运行时的 User-Agent 与抓取 Cookie 的浏览器不一致，极易被判定为异常并吊销 Session。
+- 在抓取 Cookie 的同一个浏览器中按 `F12` 打开控制台（Console），输入 `navigator.userAgent` 并回车复制完整 UA。
+- 添加 Secret `GLADOS_USER_AGENT` 并填入该字符串。
 
-- 多账号请在 `GLADOS_COOKIES` 中添加多个 Cookie，中间使用 `&` 连接。（例如：`cookie1&cookie2&cookie3`）
+4. 配置积分兑换策略（非必须）
 
-3. 配置积分兑换策略（非必须）
-
-- 添加1个`repository secret`，命名为`GLADOS_EXCHANGE_PLAN`，配置自动兑换积分策略：
+- 添加 1 个 Repository Secret，命名为 `GLADOS_EXCHANGE_PLAN`，配置自动兑换积分策略：
 
 | 值 | 积分要求 | 兑换天数 |
 |---|---------|---------|
