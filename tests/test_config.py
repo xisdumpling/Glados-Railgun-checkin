@@ -80,6 +80,43 @@ class ConfigEnvironmentTests(unittest.TestCase):
         self.assertEqual(headers["content-type"], "application/json;charset=UTF-8")
         self.assertEqual(headers["accept"], "application/json, text/plain, */*")
 
+    def test_cookies_parsing_with_ampersand_and_newline_and_folded_lines(self):
+        checkin = self.import_checkin()
+
+        # 1. 换行分隔两个账号（无 &）
+        raw_newline = (
+            "gld:accts=acct1; gld:sess=sess1; gld:sess.sig=sig1;\n"
+            "gld:sess=sess2; gld:sess.sig=sig2; gld:accts=acct2;"
+        )
+        with patch.dict(os.environ, {"GLADOS_COOKIES": raw_newline}, clear=True):
+            config = checkin.Config()
+        self.assertEqual(len(config.cookies_list), 2)
+        self.assertEqual(config.cookies_list[0], "gld:accts=acct1; gld:sess=sess1; gld:sess.sig=sig1;")
+        self.assertEqual(config.cookies_list[1], "gld:sess=sess2; gld:sess.sig=sig2; gld:accts=acct2;")
+
+        # 2. 混合 & 与换行
+        raw_mixed = (
+            "gld:sess=sess1; gld:sess.sig=sig1; &\n"
+            "gld:sess=sess2; gld:sess.sig=sig2;"
+        )
+        with patch.dict(os.environ, {"GLADOS_COOKIES": raw_mixed}, clear=True):
+            config = checkin.Config()
+        self.assertEqual(len(config.cookies_list), 2)
+
+        # 3. 单个账号意外折行（单行不含独立完整账号）会被合并为单行，清除换行
+        raw_folded = (
+            "gld:accts=acct1;\n"
+            "gld:accts.sig=acctsig1;\n"
+            "gld:sess=sess1;\n"
+            "gld:sess.sig=sig1;"
+        )
+        with patch.dict(os.environ, {"GLADOS_COOKIES": raw_folded}, clear=True):
+            config = checkin.Config()
+        self.assertEqual(len(config.cookies_list), 1)
+        self.assertNotIn("\n", config.cookies_list[0])
+        self.assertIn("gld:accts=acct1;", config.cookies_list[0])
+        self.assertIn("gld:sess=sess1;", config.cookies_list[0])
+
 
 class FakeConfig:
     verbose = False

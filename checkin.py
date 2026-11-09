@@ -138,7 +138,21 @@ class Config:
             logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_COOKIES}' 未设置。")
             self.cookies_list = []
         else:
-            self.cookies_list = [cookie.strip() for cookie in raw_cookies_env.split("&") if cookie.strip()]
+            # 兼容 '&' 分隔以及直接换行分隔（一行一个账号）
+            raw_parts = [part.strip() for part in raw_cookies_env.split("&") if part.strip()]
+            parsed_cookies = []
+            for part in raw_parts:
+                lines = [line.strip() for line in part.splitlines() if line.strip()]
+                # 若片段内包含多行且每行都具有独立会话标识(sess)，则按行拆分为独立账号
+                if len(lines) > 1 and all("sess" in line for line in lines):
+                    parsed_cookies.extend(lines)
+                else:
+                    # 否则视为单条 Cookie（合并因复制意外折行的多行），避免 HTTP Header 注入非法换行符
+                    single_cookie = " ".join(lines)
+                    if single_cookie:
+                        parsed_cookies.append(single_cookie)
+
+            self.cookies_list = parsed_cookies
             if not self.cookies_list:
                 raise ValueError(f"环境变量 '{self.ENV_COOKIES}' 已设置，但未包含任何有效的 Cookie。")
 

@@ -23,11 +23,12 @@
 推荐使用浏览器扩展 **Cookie-Editor** 或按 `F12` 获取：
 
 - 登录 [GLaDOS](https://glados.cloud) 后，点击浏览器扩展栏里的 **Cookie-Editor**（或按 `F12` 切换到 **Application** -> **Cookies**）。
-- 确认包含完整的 Session 字段及其签名（新版为 `gld:sess` 和 `gld:sess.sig`；旧版为 `koa:sess` 和 `koa:sess.sig`）。
-- **必须成对包含两个字段**，例如：
-  `gld:sess=...; gld:sess.sig=...;` （或 `koa:sess=...; koa:sess.sig=...;`）
-- 将该完整字符串填入 `GLADOS_COOKIES`。
-- 多账号请在 `GLADOS_COOKIES` 中使用 `&` 连接多个 Cookie（例如：`cookie1&cookie2`）。
+- 确认包含完整的凭证字段及签名：
+  - 会话字段：`gld:sess` 与 `gld:sess.sig`（旧版为 `koa:sess` 与 `koa:sess.sig`）
+  - 账户字段（最新多账号功能引入）：`gld:accts` 与 `gld:accts.sig`
+- **建议直接整串复制导出的 Cookie**（其中的 `__stripe_mid` 等无关跟踪字段不影响），保证 `gld:` 开头的凭据完整无损。
+- 将完整字符串填入 `GLADOS_COOKIES`。
+- 多账号支持：使用 `&` 连接多个账号 Cookie（例如：`cookie1 & cookie2`），或在 Secret 中直接**一行一个账号**粘贴，脚本均能自动识别。
 
 > ⚠️ **防止 Cookie 频繁/第二天失效的关键注意事项**：
 > 1. **抓取后切勿点击“退出登录（Log out）”**：点击退出会导致服务端 Session 立即销毁作废，抓取后直接关闭标签页即可。
